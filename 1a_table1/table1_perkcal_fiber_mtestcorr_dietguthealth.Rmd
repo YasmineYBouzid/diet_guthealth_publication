@@ -1,0 +1,207 @@
+---
+title: "table1_dietguthealth"
+author: "Yasmine"
+date: "2024-01-12"
+output: html_document
+---
+
+Running statistics to see associations between fiber and gut health (Table 1)
+Represent each variable as units per 1000 kcal for standardization 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+
+```
+
+```{r import}
+
+df_c <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_c.csv", header = T)
+
+df_m <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_m.csv", header = T)
+
+df_n <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_n.csv", header = T)
+
+df_l <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_l.csv", header = T)
+
+# unfortunately, need to correct structure of some variables each time -->
+
+df_c$subject_id <- as.factor(as.character(df_c$subject_id))
+df_c$sex <- df_c$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_c$age_cat <- df_c$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_c$bmi_cat <- df_c$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_m$subject_id <- as.factor(as.character(df_m$subject_id))
+df_m$sex <- df_m$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_m$age_cat <- df_m$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_m$bmi_cat <- df_m$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_n$subject_id <- as.factor(as.character(df_n$subject_id))
+df_n$sex <- df_n$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_n$age_cat <- df_n$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_n$bmi_cat <- df_n$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_l$subject_id <- as.factor(as.character(df_l$subject_id))
+df_l$sex <- df_l$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_l$age_cat <- df_l$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_l$bmi_cat <- df_l$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+```
+
+Models used for analysis: regression of transformed GI inflammation marker ~ dietary component
+Covariates: age, sex, BMI
+
+```{r asa24-total-fiber}
+
+# Create fibe_pk (pk = per 1000 kcal)
+
+df_c$fibe_pk <- df_c$fibe/(df_c$kcal/1000)
+df_m$fibe_pk <- df_m$fibe/(df_m$kcal/1000)
+df_n$fibe_pk <- df_n$fibe/(df_n$kcal/1000)
+df_l$fibe_pk <- df_l$fibe/(df_l$kcal/1000)
+
+# Calprotectin
+
+mod_fibe_pk_c <- lm(clpn_ln ~ fibe_pk + age + sex + bmi_final, data = df_c)
+summary(mod_fibe_pk_c) # 
+
+# Myeloperoxidase
+
+mod_fibe_pk_m <- lm(mpo_ln ~ fibe_pk + age + sex + bmi_final, data = df_m)
+summary(mod_fibe_pk_m) # NS
+
+# Neopterin
+
+mod_fibe_pk_n <- lm(nptn_boxcox ~ fibe_pk + age + sex + bmi_final, data = df_n)
+summary(mod_fibe_pk_n) # p = 0.00252 **
+
+# LBP
+
+mod_fibe_pk_l <- lm(lbp_ln ~ fibe_pk + age + sex + bmi_final, data = df_l)
+summary(mod_fibe_pk_l) # NS
+
+# Extract p-values 
+p_c_fib <- summary(mod_fibe_pk_c)$coefficients[2,4] # 
+p_m_fib <- summary(mod_fibe_pk_m)$coefficients[2,4]
+p_n_fib <- summary(mod_fibe_pk_n)$coefficients[2,4]
+p_l_fib <- summary(mod_fibe_pk_l)$coefficients[2,4]
+
+
+```
+Next, we'll look at total fiber from FFQ (dt_fibe)
+
+```{r ffq-total-fiber}
+
+# Create dt_fibe_pk (pk = per 1000 kcal)
+
+df_c$dt_fibe_pk <- df_c$dt_fibe/(df_c$kcal/1000)
+df_m$dt_fibe_pk <- df_m$dt_fibe/(df_m$kcal/1000)
+df_n$dt_fibe_pk <- df_n$dt_fibe/(df_n$kcal/1000)
+df_l$dt_fibe_pk <- df_l$dt_fibe/(df_l$kcal/1000)
+
+# Calprotectin
+
+mod_dt_fibe_pk_c <- lm(clpn_ln ~ dt_fibe_pk + age + sex + bmi_final, data = df_c)
+summary(mod_dt_fibe_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_dt_fibe_pk_m <- lm(mpo_ln ~ dt_fibe_pk + age + sex + bmi_final, data = df_m)
+summary(mod_dt_fibe_pk_m) # NS
+
+# Neopterin
+
+mod_dt_fibe_pk_n <- lm(nptn_boxcox ~ dt_fibe_pk + age + sex + bmi_final, data = df_n)
+summary(mod_dt_fibe_pk_n) # NS
+
+# LBP
+
+mod_dt_fibe_pk_l <- lm(lbp_ln ~ dt_fibe_pk + age + sex + bmi_final, data = df_l)
+summary(mod_dt_fibe_pk_l) # NS
+
+# Extract p-values (_f for ffq)
+p_c_fib_f <- summary(mod_dt_fibe_pk_c)$coefficients[2,4] 
+p_m_fib_f <- summary(mod_dt_fibe_pk_m)$coefficients[2,4]
+p_n_fib_f <- summary(mod_dt_fibe_pk_n)$coefficients[2,4]
+p_l_fib_f <- summary(mod_dt_fibe_pk_l)$coefficients[2,4]
+
+
+```
+
+Last, we'll look at soluble fiber from the FFQ (dt_fiber_sol)
+
+```{r ffq-sol-fiber}
+
+
+# Create dt_fiber_sol_pk (pk = per 1000 kcal)
+
+df_c$dt_fiber_sol_pk <- df_c$dt_fiber_sol/(df_c$kcal/1000)
+df_m$dt_fiber_sol_pk <- df_m$dt_fiber_sol/(df_m$kcal/1000)
+df_n$dt_fiber_sol_pk <- df_n$dt_fiber_sol/(df_n$kcal/1000)
+df_l$dt_fiber_sol_pk <- df_l$dt_fiber_sol/(df_l$kcal/1000)
+
+# Calprotectin
+
+mod_dt_fiber_sol_pk_c <- lm(clpn_ln ~ dt_fiber_sol_pk + age + sex + bmi_final, data = df_c)
+summary(mod_dt_fiber_sol_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_dt_fiber_sol_pk_m <- lm(mpo_ln ~ dt_fiber_sol_pk + age + sex + bmi_final, data = df_m)
+summary(mod_dt_fiber_sol_pk_m) # NS
+
+# Neopterin
+
+mod_dt_fiber_sol_pk_n <- lm(nptn_boxcox ~ dt_fiber_sol_pk + age + sex + bmi_final, data = df_n)
+summary(mod_dt_fiber_sol_pk_n) # NS
+
+# LBP
+
+mod_dt_fiber_sol_pk_l <- lm(lbp_ln ~ dt_fiber_sol_pk + age + sex + bmi_final, data = df_l)
+summary(mod_dt_fiber_sol_pk_l) # NS
+
+# Extract p-values (_f for ffq)
+p_c_sfib_f <- summary(mod_dt_fiber_sol_pk_c)$coefficients[2,4] 
+p_m_sfib_f <- summary(mod_dt_fiber_sol_pk_m)$coefficients[2,4]
+p_n_sfib_f <- summary(mod_dt_fiber_sol_pk_n)$coefficients[2,4]
+p_l_sfib_f <- summary(mod_dt_fiber_sol_pk_l)$coefficients[2,4]
+
+
+```
+
+```{r p-test-df}
+
+# Collating the p-vals into a df for future multiple hypothesis test correction 
+
+c_asa_pk_pval_df <- data.frame(p_c_fib)
+c_ffq_pk_pval_df <- data.frame(p_c_fib_f, p_c_sfib_f)
+
+m_asa_pk_pval_df <- data.frame(p_m_fib)
+m_ffq_pk_pval_df <- data.frame(p_m_fib_f, p_m_sfib_f)
+
+n_asa_pk_pval_df <- data.frame(p_n_fib)
+n_ffq_pk_pval_df <- data.frame(p_n_fib_f, p_n_sfib_f)
+
+l_asa_pk_pval_df <- data.frame(p_l_fib)
+l_ffq_pk_pval_df <- data.frame(p_l_fib_f, p_l_sfib_f)
+
+# Export
+
+write.csv(c_asa_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_asa_pk_pval_df.csv", row.names = T)
+write.csv(c_ffq_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_ffq_pk_pval_df.csv", row.names = T)
+
+write.csv(m_asa_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_asa_pk_pval_df.csv", row.names = T)
+write.csv(m_ffq_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_ffq_pk_pval_df.csv", row.names = T)
+
+write.csv(n_asa_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/n_asa_pk_pval_df.csv", row.names = T)
+write.csv(n_ffq_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/n_ffq_pk_pval_df.csv", row.names = T)
+
+write.csv(l_asa_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/l_asa_pk_pval_df.csv", row.names = T)
+write.csv(l_ffq_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/l_ffq_pk_pval_df.csv", row.names = T)
+
+```
+
+**Summary of Findings**: 
+
+- 

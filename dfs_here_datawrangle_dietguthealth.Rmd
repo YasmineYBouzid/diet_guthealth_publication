@@ -1,0 +1,132 @@
+---
+title: "datawrangle_dietguthealth"
+author: "Yasmine"
+date: "2024-01-09"
+output: html_document
+---
+**Purpose**: Wrangle data for analysis for USDA Nutritional Phenotyping Study associations between diet and gastrointestinal inflammation project. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load libraries 
+library(tidyverse)
+```
+
+Variables of interest (ASA24 and FFQ): 
+- Energy
+- Fiber
+- Vegetables (excluding legumes)
+- Legumes
+- Total vegetables 
+- Saturated fat
+- HEI scores
+- DII scores
+
+Separate data frame for each GIM:
+- Calprotectin (df_c)
+- Myeloperoxidase (df_m)
+- Neopterin (df_n) 
+- LPS-binding protein (df_l)
+
+
+```{r data-import}
+
+# Import data frames with GI inflammation data 
+# For stool markers (calprotectin, MPO, neopterin), stool collected post-V2 and stool processed >24h have been excluded
+
+# For all markers, transformation to normal has been conducted for statistical tests: clpn_ln is (ln(x + 3)), mpo_ln is (ln(x + 1)), nptn_boxcox is Box Cox, lbp_ln is (ln(x + 1))
+
+df_c <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/calprotectin_data.csv", header = T)
+
+df_m <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/mpo_data.csv", header = T)
+
+df_n <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/neopterin_data.csv", header = T)
+
+df_l <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/lbp_data.csv", header = T)
+
+```
+
+```{r append}
+
+# Append dietary data from ASA24
+
+asa24 <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/forR_recall_data.csv", header = T)
+
+df_c <- merge(df_c, asa24, by = 'subject_id')
+df_m <- merge(df_m, asa24, by = 'subject_id')
+df_n <- merge(df_n, asa24, by = 'subject_id')
+df_l <- merge(df_l, asa24, by = 'subject_id')
+
+# Append dietary data from FFQ
+
+ffq <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/forR_ffq_data.csv", header = T)
+
+df_c <- merge(df_c, ffq, by = 'subject_id')
+df_m <- merge(df_m, ffq, by = 'subject_id')
+df_n <- merge(df_n, ffq, by = 'subject_id')
+df_l <- merge(df_l, ffq, by = 'subject_id')
+
+# Append HEI scores
+
+hei <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/forR_HEIscores.csv", header = T)
+
+df_c <- merge(df_c, hei, by = 'subject_id')
+df_m <- merge(df_m, hei, by = 'subject_id')
+df_n <- merge(df_n, hei, by = 'subject_id')
+df_l <- merge(df_l, hei, by = 'subject_id')
+
+# Append DII scores 
+
+dii <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/forR_DIIscores.csv", header = T)
+
+df_c <- merge(df_c, dii, by = 'subject_id')
+df_m <- merge(df_m, dii, by = 'subject_id')
+df_n <- merge(df_n, dii, by = 'subject_id')
+df_l <- merge(df_l, dii, by = 'subject_id')
+
+```
+
+```{r correct-variable-data-types}
+
+df_c$subject_id <- as.factor(as.character(df_c$subject_id))
+df_c$sex <- df_c$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_c$age_cat <- df_c$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_c$bmi_cat <- df_c$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_m$subject_id <- as.factor(as.character(df_m$subject_id))
+df_m$sex <- df_m$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_m$age_cat <- df_m$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_m$bmi_cat <- df_m$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_n$subject_id <- as.factor(as.character(df_n$subject_id))
+df_n$sex <- df_n$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_n$age_cat <- df_n$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_n$bmi_cat <- df_n$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_l$subject_id <- as.factor(as.character(df_l$subject_id))
+df_l$sex <- df_l$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_l$age_cat <- df_l$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_l$bmi_cat <- df_l$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+rm(asa24, ffq, dii, hei)
+
+# READY FOR LIFT OFF
+
+```
+
+For reproducibility, export each of these data frames into the 'data' folder
+```{r export}
+
+write.csv(df_c, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_c.csv", row.names = F)
+
+write.csv(df_m, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_m.csv", row.names = F)
+
+write.csv(df_n, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_n.csv", row.names = F)
+
+write.csv(df_l, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_l.csv", row.names = F)
+
+```
+
+They will be loaded at the start of each Rmd file. 
+

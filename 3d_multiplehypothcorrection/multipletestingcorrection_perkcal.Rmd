@@ -1,0 +1,114 @@
+---
+title: "multtestcorr"
+author: "Yasmine"
+date: "2024-01-14"
+output: html_document
+---
+Correcting for multiple hypothesis testing for diet_guthealth
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# multtest doesn't work for my version of R so gonna use stats package p.adjust
+```
+
+```{r import}
+
+c_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_asa_pk_pval_df.csv", header = T)
+m_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_asa_pk_pval_df.csv", header = T)
+n_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/n_asa_pk_pval_df.csv", header = T)
+l_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/l_asa_pk_pval_df.csv", header = T)
+
+
+c_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_ffq_pk_pval_df.csv", header = T)
+m_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_ffq_pk_pval_df.csv", header = T)
+n_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/n_ffq_pk_pval_df.csv", header = T)
+l_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/l_ffq_pk_pval_df.csv", header = T)
+
+```
+
+```{r clpn-adj}
+
+# Make a vector of p-vales
+
+p_asa_pk_c <- c_asa_pk_pval_df[1, c(4:11)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_asa_pk_c, method = "BH", n = length(p_asa_pk_c))
+
+
+# Make a vector of p-vales
+
+p_ffq_pk_c <- c_ffq_pk_pval_df[1, c(4:12)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_ffq_pk_c, method = "BH", n = length(p_ffq_pk_c))
+
+```
+
+```{r mpo-adj}
+
+# Make a vector of p-vales
+
+p_asa_pk_m <- m_asa_pk_pval_df[1, c(4:11)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_asa_pk_m, method = "BH", n = length(p_asa_pk_m))
+
+
+# Make a vector of p-vales
+
+p_ffq_pk_m <- m_ffq_pk_pval_df[1, c(4:12)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_ffq_pk_m, method = "BH", n = length(p_ffq_pk_m))
+
+```
+
+
+```{r nptn-adj}
+
+# Make a vector of p-vales
+
+p_asa_pk_n <- n_asa_pk_pval_df[1, c(4:11)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_asa_pk_n, method = "BH", n = length(p_asa_pk_n))
+
+
+# Make a vector of p-vales
+
+p_ffq_pk_n <- n_ffq_pk_pval_df[1, c(4:12)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_ffq_pk_n, method = "BH", n = length(p_ffq_pk_n))
+
+```
+
+
+```{r lbp-adj}
+
+# Make a vector of p-vales
+
+p_asa_pk_l <- l_asa_pk_pval_df[1, c(4:11)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_asa_pk_l, method = "BH", n = length(p_asa_pk_l))
+
+
+# Make a vector of p-vales
+
+p_ffq_pk_l <- l_ffq_pk_pval_df[1, c(4:12)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_ffq_pk_l, method = "BH", n = length(p_ffq_pk_l))
+
+```

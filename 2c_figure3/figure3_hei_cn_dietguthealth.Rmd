@@ -1,0 +1,124 @@
+---
+title: "table1_dietguthealth"
+author: "Yasmine"
+date: "2024-01-12"
+output: html_document
+---
+
+Creating Figure 3 plot to show regression for HEI calprotectin and DII neopterin
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggpubr)
+
+```
+
+```{r import}
+
+df_c <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_c.csv", header = T)
+
+df_n <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_n.csv", header = T)
+
+
+# unfortunately, need to correct structure of some variables each time -->
+
+df_c$subject_id <- as.factor(as.character(df_c$subject_id))
+df_c$sex <- df_c$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_c$age_cat <- df_c$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_c$bmi_cat <- df_c$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_n$subject_id <- as.factor(as.character(df_n$subject_id))
+df_n$sex <- df_n$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_n$age_cat <- df_n$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_n$bmi_cat <- df_n$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+```
+
+Models used for analysis: regression of transformed GI inflammation marker ~ dietary component
+Covariates: age, sex, BMI
+
+Creating plots to show regression curves for associations between total HEI and calprotectin and neopterin
+
+```{r asa24-hei}
+
+# Calprotectin
+
+mod_hei_asa24_totalscore_c <- lm(clpn_ln ~ hei_asa24_totalscore + age + sex + bmi_final, data = df_c)
+summary(mod_hei_asa24_totalscore_c) # NS
+
+# make the regression plot 
+
+ggplotRegression_c_hei <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Recent Intake Total HEI Score vs. Calprotectin (n = 295)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 2),
+                     ", Beta = ",signif(fit$coef[[2]], 2),
+                     ", P = ",signif(summary(fit)$coef[2,4], 2)),
+       x = "Total Healthy Eating Index Score",
+       y = "Transformed Calprotectin (ln(x + 1))") +
+  theme_bw() + 
+  theme(text = element_text(size = 15),
+        plot.title = element_text(size = 20),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 15),
+           plot.margin = margin(10, 20, 10, 25, unit = "pt"))
+
+}
+
+ggplotRegression_c_hei(mod_hei_asa24_totalscore_c)
+
+c_hei_reg <- ggplotRegression_c_hei(mod_hei_asa24_totalscore_c)
+
+# Neopterin
+
+mod_dii_asa24_total_score_n <- lm(nptn_boxcox ~ dii_asa24_total_score + age + sex + bmi_final, data = df_n)
+summary(mod_dii_asa24_total_score_n) # 
+
+# make the regression plot 
+
+ggplotRegression_n_dii <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Recent Intake Total DII Score vs. Neopterin (n = 289)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 2),
+                     ", Beta = ",signif(fit$coef[[2]], 2),
+                     ", P = ",signif(summary(fit)$coef[2,4], 2)),
+       x = "Total Dietary Inflammatory Index Score",
+       y = "Transformed Neopterin (Box Cox)") +
+  theme_bw() + 
+  theme(text = element_text(size = 15),
+        plot.title = element_text(size = 20),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 15), 
+        plot.margin = margin(10, 50, 10, 25, unit = "pt"))
+}
+
+ggplotRegression_n_dii(mod_dii_asa24_total_score_n)
+
+n_dii_reg <- ggplotRegression_n_dii(mod_dii_asa24_total_score_n)
+
+```
+```{r grid-save}
+
+# Grid and save: 
+
+
+fig3 <- ggarrange(c_hei_reg, n_dii_reg,
+                      labels = c("A", "B"),
+                      nrow = 1, ncol = 2)
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/fig3.jpg', plot = fig3, device = 'jpeg', dpi = 300, width = 16, height = 6.4, units = "in")
+
+```
+

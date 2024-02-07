@@ -1,0 +1,131 @@
+---
+title: "table1_dietguthealth"
+author: "Yasmine"
+date: "2024-01-12"
+output: html_document
+---
+
+Running statistics to see associations between fiber and gut health (Table 1)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggpubr)
+library(effects)
+library(ggrepel)
+```
+
+```{r import}
+
+df_c <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_c.csv", header = T)
+
+df_n <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_n.csv", header = T)
+
+
+# unfortunately, need to correct structure of some variables each time -->
+
+df_c$subject_id <- as.factor(as.character(df_c$subject_id))
+df_c$sex <- df_c$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_c$age_cat <- df_c$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_c$bmi_cat <- df_c$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_n$subject_id <- as.factor(as.character(df_n$subject_id))
+df_n$sex <- df_n$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_n$age_cat <- df_n$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_n$bmi_cat <- df_n$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+```
+
+Models used for analysis: regression of transformed GI inflammation marker ~ dietary component
+Covariates: age, sex, BMI
+
+Creating plots to show regression curves for associations between total HEI and calprotectin and total DII and neopterin. Controlling for covar residuals
+
+```{r asa24-hei}
+
+library(effects); library(car)
+
+# Calprotectin
+
+mod_hei_asa24_totalscore_c <- lm(clpn_ln ~ hei_asa24_totalscore + age + sex + bmi_final, data = df_c)
+summary(mod_hei_asa24_totalscore_c) # 
+
+# x - axis (independent variable res)
+mod_hei <- lm(hei_asa24_totalscore ~ age + sex + bmi_final, data = df_c)
+df_c$mod_hei_residuals <- residuals(mod_hei)
+
+# y - axis (dependent variable res)
+mod_clpn <- lm(clpn_ln ~ age + sex + bmi_final, data = df_c)
+df_c$mod_clpn_residuals <- residuals(mod_clpn)
+
+# create the plot 
+
+fig3_partreg_clpn <-
+  ggplot(df_c, aes(x = mod_hei_residuals, y = mod_clpn_residuals)) +
+  geom_point() + 
+  geom_smooth(method = 'lm', color = 'blue') + 
+  labs(title = "Calprotectin ~ Recent HEI score + Age + Sex + BMI (n= 295)") +
+  labs(subtitle = "Adj R-squared = 0.017, Beta = -0.011, P = 0.026") +
+  labs(caption = "Holding covariates constant") + 
+  xlab("Total Healthy Eating Index Score (model residuals)") + 
+  ylab("Transformed Calprotectin (ln(x + 1))") +
+  theme_bw() + 
+   theme(text = element_text(size = 14),
+        plot.title = element_text(size = 18),
+           axis.title = element_text(size = 16),
+           axis.text = element_text(size = 14),
+        plot.margin = margin(10, 25, 10, 20, unit = "pt"))
+
+
+```
+
+```{r nptn-dii}
+
+# Neopterin
+
+mod_dii_asa24_total_score_n <- lm(nptn_boxcox ~ dii_asa24_total_score + age + sex + bmi_final, data = df_n)
+summary(mod_dii_asa24_total_score_n) # 
+
+# x - axis (independent variable res)
+mod_dii <- lm(dii_asa24_total_score ~ age + sex + bmi_final, data = df_n)
+df_n$mod_dii_residuals <- residuals(mod_dii)
+
+# y - axis (dependent variable res)
+mod_nptn <- lm(nptn_boxcox ~ age + sex + bmi_final, data = df_n)
+df_n$mod_nptn_residuals <- residuals(mod_nptn)
+
+# create the plot 
+
+fig3_partreg_nptn <-
+  ggplot(df_n, aes(x = mod_dii_residuals, y = mod_nptn_residuals)) +
+  geom_point() + 
+  geom_smooth(method = 'lm', color = 'blue') + 
+  labs(title = "Neopterin ~ Recent DII score + Age + Sex + BMI (n = 289)") +
+  labs(subtitle = "Adj R-squared = 0.063, Beta = 0.096, P = 0.015") +
+  labs(caption = "Holding covariates constant") + 
+  xlab("Total Dietary Inflammatory Index Score (model residuals)") + 
+  ylab("Transformed Neopterin (Box Cox)") +
+  theme_bw() + 
+   theme(text = element_text(size = 14),
+        plot.title = element_text(size = 18),
+           axis.title = element_text(size = 16),
+           axis.text = element_text(size = 14),
+        plot.margin = margin(10, 25, 10, 20, unit = "pt"))
+
+```
+
+
+```{r grid-save}
+
+# Grid and save: 
+
+
+fig3_partreg <- ggarrange(fig3_partreg_clpn, fig3_partreg_nptn,
+                      labels = c("A", "B"),
+                      nrow = 1, ncol = 2)
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/fig3_partreg.jpg', plot = fig3_partreg, device = 'jpeg', dpi = 300, width = 16, height = 6.4, units = "in")
+
+```
+

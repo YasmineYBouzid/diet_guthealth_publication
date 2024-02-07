@@ -1,0 +1,404 @@
+---
+title: "pa_corr_dietguthealth"
+author: "Yasmine"
+date: "2024-01-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggpubr)
+library(rcompanion)
+```
+
+```{r data}
+
+df_c <- read.csv("/Users/yasmine.bouzid/Desktop/GraduateWork/DataScience/Dairy_GutHealth/data/df_c_sc.csv", header = T) # n = 295, check. 
+
+df_m <- read.csv("/Users/yasmine.bouzid/Desktop/GraduateWork/DataScience/Dairy_GutHealth/data/df_m_sc.csv", header = T) # n = 295, check. 
+
+df_n <- read.csv("/Users/yasmine.bouzid/Desktop/GraduateWork/DataScience/Dairy_GutHealth/data/df_n_sc.csv", header = T) # 289, check. 
+
+# and normalize:
+
+df_n$nptn_boxcox <- (bestNormalize::boxcox(df_n$fecal_neopterin))$x.t
+
+df_l <- read.csv(file = "/Users/yasmine.bouzid/Desktop/GraduateWork/DataScience/Dairy_GutHealth/data/df_gh_l_rd.csv", header = TRUE) #348, check. 
+
+# And fix the structure of things 
+
+df_c$subject_id <- as.factor(as.character(df_c$subject_id))
+df_c$sex <- df_c$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_c$age_cat <- df_c$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_c$bmi_cat <- df_c$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+df_c$AfterV2 <- df_c$AfterV2 %>% recode_factor('0' = "No", '1' = "Yes")
+
+df_m$subject_id <- as.factor(as.character(df_m$subject_id))
+df_m$sex <- df_m$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_m$age_cat <- df_m$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_m$bmi_cat <- df_m$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+df_m$AfterV2 <- df_m$AfterV2 %>% recode_factor('0' = "No", '1' = "Yes")
+
+df_n$subject_id <- as.factor(as.character(df_n$subject_id))
+df_n$sex <- df_n$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_n$age_cat <- df_n$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_n$bmi_cat <- df_n$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+df_n$AfterV2 <- df_n$AfterV2 %>% recode_factor('0' = "No", '1' = "Yes")
+
+df_l$subject_id <- as.factor(as.character(df_l$subject_id))
+df_l$sex <- df_l$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_l$age_cat <- df_l$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_l$bmi_cat <- df_l$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+# READY FOR LIFT OFF
+
+```
+
+Import the physical activity (PA) data and append 
+
+```{r pa-data}
+
+# Import
+
+pa <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/forR_pa_data.csv", header = T)
+
+# Append to the GIM dataframes 
+
+df_c <- merge(df_c, pa, by = 'subject_id')
+df_m <- merge(df_m, pa, by = 'subject_id')
+df_n <- merge(df_n, pa, by = 'subject_id')
+df_l <- merge(df_l, pa, by = 'subject_id')
+
+
+```
+
+First, check association between pa_ee_total and GIMs (covar: age, sex, BMI)
+
+```{r corr-pa-total}
+
+# pa_ee_total is mean total energy expenditure (kcal) per day that waist actical was worn
+# Look at the distribution for pa_ee_total
+
+dist_pa_ee_c <- plotDensityHistogram(df_c$pa_ee_total)
+dist_pa_ee_l <- plotDensityHistogram(df_l$pa_ee_total) # stool markers (df_c, df_m, df_n) are similar but added df_l because it's the largest distribution 
+# Both nearly normal with slight right skew
+
+# Calprotectin
+
+mod_c_pa <- lm(clpn_ln ~ pa_ee_total + age + sex + bmi_final, data = df_c)
+summary(mod_c_pa) # slope is positive: 0.0005076
+# sig association: p = 0.0380 * 
+# age also significant: slope = -0.0076752, p = 0.0346 *
+
+# make the regression plot 
+
+ggplotRegression_c_pa <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Mixed Model: Total PA Expenditure vs. Calprotectin (n = 295)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                     ", Intercept = ",signif(fit$coef[[1]],5 ),
+                     ", Slope = ",signif(fit$coef[[2]], 5),
+                     ", P = ",signif(summary(fit)$coef[2,4], 5)),
+       x = "Total PA Expenditure (kcal)",
+       y = "Transformed Calprotectin (ln(x + 1))") +
+  theme_bw()
+}
+
+ggplotRegression_c_pa(mod_c_pa)
+
+c_pa_mx <- ggplotRegression_c_pa(mod_c_pa) 
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/c_pa_mx.jpeg', c_pa_mx, device = 'jpeg', dpi = 300, width = 7, height = 5)
+
+
+
+# Myeloperoxidase
+
+mod_m_pa <- lm(mpo_ln ~ pa_ee_total + age + sex + bmi_final, data = df_m)
+summary(mod_m_pa) # NS
+
+
+# make the regression plot 
+
+ggplotRegression_m_pa <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Mixed Model: Total PA Expenditure vs. Myeloperoxidase (n = 295)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                     ", Intercept = ",signif(fit$coef[[1]],5 ),
+                     ", Slope = ",signif(fit$coef[[2]], 5),
+                     ", P = ",signif(summary(fit)$coef[2,4], 5)),
+       x = "Total PA Expenditure (kcal)",
+       y = "Transformed Myeloperoxidase (ln(x + 3))") +
+  theme_bw()
+}
+
+ggplotRegression_m_pa(mod_m_pa)
+
+m_pa_mx <- ggplotRegression_m_pa(mod_m_pa) 
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/m_pa_mx.jpeg', m_pa_mx, device = 'jpeg', dpi = 300, width = 7, height = 5)
+
+
+
+
+# Neopterin
+
+mod_n_pa <- lm(nptn_boxcox ~ pa_ee_total + age + sex + bmi_final, data = df_n)
+summary(mod_n_pa) # NS
+# negative slope is odd
+
+# make the regression plot 
+
+ggplotRegression_n_pa <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Mixed Model: Total PA Expenditure vs. Neopterin (n = 289)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                     ", Intercept = ",signif(fit$coef[[1]],5 ),
+                     ", Slope = ",signif(fit$coef[[2]], 5),
+                     ", P = ",signif(summary(fit)$coef[2,4], 5)),
+       x = "Total PA Expenditure (kcal)",
+       y = "Transformed Neopterin (Box Cox)") +
+  theme_bw()
+}
+
+ggplotRegression_n_pa(mod_n_pa)
+
+n_pa_mx <- ggplotRegression_n_pa(mod_n_pa) 
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/n_pa_mx.jpeg', n_pa_mx, device = 'jpeg', dpi = 300, width = 7, height = 5)
+
+
+
+# LPS-binding protein (LBP)
+
+mod_l_pa <- lm(lbp_ln ~ pa_ee_total + age + sex + bmi_final, data = df_l)
+summary(mod_l_pa) # NS
+# negative slope again
+
+# make the regression plot 
+
+ggplotRegression_l_pa <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Mixed Model: Total PA Expenditure vs. LBP (n = 348)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                     ", Intercept = ",signif(fit$coef[[1]],5 ),
+                     ", Slope = ",signif(fit$coef[[2]], 5),
+                     ", P = ",signif(summary(fit)$coef[2,4], 5)),
+       x = "Total PA Expenditure (kcal)",
+       y = "Transformed LBP (ln(x + 1))") +
+  theme_bw()
+}
+
+ggplotRegression_l_pa(mod_l_pa)
+
+l_pa_mx <- ggplotRegression_l_pa(mod_l_pa) 
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/l_pa_mx.jpeg', l_pa_mx, device = 'jpeg', dpi = 300, width = 7, height = 5)
+
+# Save in a grid format 
+
+pa_mx <- ggarrange(c_pa_mx, m_pa_mx, n_pa_mx, l_pa_mx,
+                      labels = c("A", "B", "C", "D"),
+                      nrow = 2, ncol = 2)
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/grid_pa_mx.jpeg', plot = pa_mx, device = 'jpeg', dpi = 300, width = 15, height = 10)
+
+```
+
+Next, let's look at the association between moderate/vigorous PA only (anti-inflammatory compared to light PA) with GIM
+
+```{r add-pa-mod-vig}
+
+# Create a variable (pa_ee_mod_vig) that sums energy expenditure (kcal) from moderate (pa_ee_moderate) and vigorous (pa_ee_vigorous) activity 
+
+df_c$pa_ee_mod_vig <- df_c$pa_ee_moderate + df_c$pa_ee_vigorous
+df_c["pa_ee_mod_vig"][is.na(df_c["pa_ee_mod_vig"])] <- 0 # replace NA with 0
+
+df_m$pa_ee_mod_vig <- df_m$pa_ee_moderate + df_m$pa_ee_vigorous
+df_m["pa_ee_mod_vig"][is.na(df_m["pa_ee_mod_vig"])] <- 0 # replace NA with 0
+
+df_n$pa_ee_mod_vig <- df_n$pa_ee_moderate + df_n$pa_ee_vigorous
+df_n["pa_ee_mod_vig"][is.na(df_n["pa_ee_mod_vig"])] <- 0 # replace NA with 0
+
+df_l$pa_ee_mod_vig <- df_l$pa_ee_moderate + df_l$pa_ee_vigorous
+df_l["pa_ee_mod_vig"][is.na(df_l["pa_ee_mod_vig"])] <- 0 # replace NA with 0
+
+```
+
+```{r corr-pa-mod-vig}
+
+# pa_ee_mod_vig is mean total energy expenditure (kcal) from moderate and vigorous activity (excludes light activity) per day that waist actical was worn 
+
+# Look at the distribution for pa_ee_mod_vig
+dist_pa_ee_mv_c <- plotDensityHistogram(df_c$pa_ee_mod_vig) # very right skewed, most don't get much mod/vig activity
+dist_pa_ee_mv_l <- plotDensityHistogram(df_l$pa_ee_mod_vig) # same shape as _c^
+
+# Calprotectin
+
+mod_c_pa_mv <- lm(clpn_ln ~ pa_ee_mod_vig + age + sex + bmi_final, data = df_c)
+summary(mod_c_pa_mv) # NS
+
+# make the regression plot 
+
+ggplotRegression_c_pa_mv <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Mixed Model: Moderate & Vigorous PA Expenditure vs. Calprotectin (n = 295)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                     ", Intercept = ",signif(fit$coef[[1]],5 ),
+                     ", Slope = ",signif(fit$coef[[2]], 5),
+                     ", P = ",signif(summary(fit)$coef[2,4], 5)),
+       x = "Moderate & Vigorous PA Expenditure (kcal)",
+       y = "Transformed Calprotectin (ln(x + 1))") +
+  theme_bw()
+}
+
+ggplotRegression_c_pa_mv(mod_c_pa_mv)
+
+c_pa_mv_mx <- ggplotRegression_c_pa_mv(mod_c_pa_mv) 
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/c_pa_mv_mx.jpeg', c_pa_mv_mx, device = 'jpeg', dpi = 300, width = 7, height = 5)
+
+
+
+# Myeloperoxidase
+
+mod_m_pa_mv <- lm(mpo_ln ~ pa_ee_mod_vig + age + sex + bmi_final, data = df_m)
+summary(mod_m_pa_mv) # NS
+
+
+# make the regression plot 
+
+ggplotRegression_m_pa_mv <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Mixed Model: Moderate & Vigorous PA Expenditure vs. Myeloperoxidase (n = 295)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                     ", Intercept = ",signif(fit$coef[[1]],5 ),
+                     ", Slope = ",signif(fit$coef[[2]], 5),
+                     ", P = ",signif(summary(fit)$coef[2,4], 5)),
+       x = "Moderate & Vigorous PA Expenditure (kcal)",
+       y = "Transformed Myeloperoxidase (ln(x + 3))") +
+  theme_bw()
+}
+
+ggplotRegression_m_pa_mv(mod_m_pa_mv)
+
+m_pa_mv_mx <- ggplotRegression_m_pa_mv(mod_m_pa_mv) 
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/m_pa_mv_mx.jpeg', m_pa_mv_mx, device = 'jpeg', dpi = 300, width = 7, height = 5)
+
+
+
+
+# Neopterin
+
+mod_n_pa_mv <- lm(nptn_boxcox ~ pa_ee_mod_vig + age + sex + bmi_final, data = df_n)
+summary(mod_n_pa_mv) # NS
+
+
+# make the regression plot 
+
+ggplotRegression_n_pa_mv <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Mixed Model: Moderate & Vigorous PA Expenditure vs. Neopterin (n = 289)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                     ", Intercept = ",signif(fit$coef[[1]],5 ),
+                     ", Slope = ",signif(fit$coef[[2]], 5),
+                     ", P = ",signif(summary(fit)$coef[2,4], 5)),
+       x = "Moderate & Vigorous PA Expenditure (kcal)",
+       y = "Transformed Neopterin (Box Cox)") +
+  theme_bw()
+}
+
+ggplotRegression_n_pa_mv(mod_n_pa_mv)
+
+n_pa_mv_mx <- ggplotRegression_n_pa_mv(mod_n_pa_mv) 
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/n_pa_mv_mx.jpeg', n_pa_mv_mx, device = 'jpeg', dpi = 300, width = 7, height = 5)
+
+
+
+# LPS-binding protein (LBP)
+
+mod_l_pa_mv <- lm(lbp_ln ~ pa_ee_mod_vig + age + sex + bmi_final, data = df_l)
+summary(mod_l_pa_mv) # NS
+
+
+# make the regression plot 
+
+ggplotRegression_l_pa_mv <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Mixed Model: Moderate & Vigorous PA Expenditure vs. LBP (n = 348)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                     ", Intercept = ",signif(fit$coef[[1]],5 ),
+                     ", Slope = ",signif(fit$coef[[2]], 5),
+                     ", P = ",signif(summary(fit)$coef[2,4], 5)),
+       x = "Moderate & Vigorous PA Expenditure (kcal)",
+       y = "Transformed LBP (ln(x + 1))") +
+  theme_bw()
+}
+
+ggplotRegression_l_pa_mv(mod_l_pa_mv)
+
+l_pa_mv_mx <- ggplotRegression_l_pa_mv(mod_l_pa_mv) 
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/l_pa_mv_mx.jpeg', l_pa_mv_mx, device = 'jpeg', dpi = 300, width = 7, height = 5)
+
+# Save in a grid format 
+
+pa_mx <- ggarrange(c_pa_mv_mx, m_pa_mv_mx, n_pa_mv_mx, l_pa_mv_mx,
+                      labels = c("A", "B", "C", "D"),
+                      nrow = 2, ncol = 2)
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/grid_pa_mv_mx.jpeg', plot = pa_mx, device = 'jpeg', dpi = 300, width = 15, height = 10)
+
+
+```
+
+**Summary of findings**: 
+
+- pa_ee_total normally distributed for the population, mean 591 kcal, min 158, max 1701 (df_l)
+- pa_ee_mod_vig right skewed: mean 191 kcal, min 0, max 960 kcal (df_l)
+- pa_ee_total significant positive corr. with calprotectin 
+- no associations between pa_ee_mod_vig and any GI inflammation markers 

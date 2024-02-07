@@ -1,0 +1,67 @@
+---
+title: "multtestcorr"
+author: "Yasmine"
+date: "2024-01-14"
+output: html_document
+---
+Correcting for multiple hypothesis testing for diet_guthealth (subclinical, Table 4)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# multtest doesn't work for my version of R so gonna use stats package p.adjust
+```
+
+```{r import}
+
+c_s_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_asa_pk_pval_df.csv", header = T)
+m_s_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_asa_pk_pval_df.csv", header = T)
+
+c_s_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_ffq_pk_pval_df.csv", header = T)
+m_s_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_ffq_pk_pval_df.csv", header = T)
+
+
+```
+
+```{r clpn-adj}
+
+# Make a vector of p-vales
+
+p_asa_pk_c_s <- c_s_asa_pk_pval_df[1, c(4:11)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_asa_pk_c_s, method = "BH", n = length(p_asa_pk_c_s))
+
+
+# Make a vector of p-vales
+
+p_ffq_pk_c_s <- c_s_ffq_pk_pval_df[1, c(4:12)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_ffq_pk_c_s, method = "BH", n = length(p_ffq_pk_c_s))
+
+```
+
+```{r mpo-adj}
+
+# Make a vector of p-vales
+
+p_asa_pk_m_s <- m_s_asa_pk_pval_df[1, c(4:11)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_asa_pk_m_s, method = "BH", n = length(p_asa_pk_m_s))
+
+
+# Make a vector of p-vales
+
+p_ffq_pk_m_s <- m_s_ffq_pk_pval_df[1, c(4:12)]
+
+# BH method of adjustment for FDR
+
+p.adjust(p_ffq_pk_m_s, method = "BH", n = length(p_ffq_pk_m_s))
+
+```
+

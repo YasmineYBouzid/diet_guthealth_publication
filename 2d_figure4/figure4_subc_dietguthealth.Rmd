@@ -1,0 +1,231 @@
+---
+title: "table1_dietguthealth"
+author: "Yasmine"
+date: "2024-01-12"
+output: html_document
+---
+
+Running statistics to see associations between fiber and gut health (Table 1)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggpubr)
+
+```
+
+```{r import}
+
+df_c <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_c.csv", header = T)
+
+# Label based off the clinical designation levels
+
+df_c$clin_level_clpn[df_c$Stool.calprotectin < 50] <- "negative"
+
+df_c$clin_level_clpn[df_c$Stool.calprotectin >= 50 & df_c$Stool.calprotectin <= 100] <- "bord_positive"
+
+df_c$clin_level_clpn[df_c$Stool.calprotectin > 100] <- "positive"
+
+# Convert variable type to factor, and order them 
+df_c$clin_level_clpn <- factor(df_c$clin_level_clpn, ordered = T,
+                                  c("negative", "bord_positive", "positive"))
+
+table(df_c$clin_level_clpn)
+
+df_c_s <- df_c %>% filter(clin_level_clpn != "positive") # n = 253, check. 
+
+df_c <- df_c_s
+rm(df_c_s)
+
+
+# unfortunately, need to correct structure of some variables each time -->
+
+df_c$subject_id <- as.factor(as.character(df_c$subject_id))
+df_c$sex <- df_c$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_c$age_cat <- df_c$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_c$bmi_cat <- df_c$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+```
+
+Models used for analysis: regression of transformed GI inflammation marker ~ dietary component
+Covariates: age, sex, BMI
+
+Creating plots to show regression curves for associations between diet components and subclincial calprotectin
+
+```{r ffq-fiber}
+
+# Calprotectin
+
+# Create dt_fibe_pk (pk = per 1000 kcal)
+
+df_c$dt_fibe_pk <- df_c$dt_fibe/(df_c$kcal/1000)
+
+mod_dt_fibe_pk_c <- lm(clpn_ln ~ dt_fibe_pk + age + sex + bmi_final, data = df_c)
+summary(mod_dt_fibe_pk_c) # P = 0.0285 *  
+
+# make the regression plot 
+
+ggplotRegression_c_fib <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Habitual Fiber Intake vs. Subclinical Calprotectin (n = 253)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 2),
+                     ", Beta = ",signif(fit$coef[[2]], 2),
+                     ", P = ",signif(summary(fit)$coef[2,4], 2)),
+       x = "Fiber (grams per 1000 kcal)",
+       y = "Transformed Calprotectin (ln(x + 1))") +
+  theme_bw() + 
+  theme(text = element_text(size = 15),
+        plot.title = element_text(size = 20),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 15),
+        plot.margin = margin(10, 50, 10, 30, unit = "pt"))
+}
+
+ggplotRegression_c_fib(mod_dt_fibe_pk_c)
+
+c_fib_reg <- ggplotRegression_c_fib(mod_dt_fibe_pk_c)
+
+
+```
+
+```{r ffq-legumes}
+
+# Calprotectin
+
+# Create v_legumes.y_pk (pk = per 1000 kcal)
+
+df_c$v_legumes.y_pk <- df_c$v_legumes.y/(df_c$kcal/1000)
+
+mod_v_legumes.y_pk_c <- lm(clpn_ln ~ v_legumes.y_pk + age + sex + bmi_final, data = df_c)
+summary(mod_v_legumes.y_pk_c) #  
+
+# make the regression plot 
+
+ggplotRegression_c_leg <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Habitual Legume Intake vs. Subclinical Calprotectin (n = 253)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 2),
+                     ", Beta = ",signif(fit$coef[[2]], 2),
+                     ", P = ",signif(summary(fit)$coef[2,4], 2)),
+       x = "Legumes (cup eq per 1000 kcal)",
+       y = "Transformed Calprotectin (ln(x + 1))") +
+  theme_bw() + 
+  theme(text = element_text(size = 15),
+        plot.title = element_text(size = 20),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 15),
+        plot.margin = margin(10, 50, 10, 30, unit = "pt"))
+}
+
+ggplotRegression_c_leg(mod_v_legumes.y_pk_c)
+
+c_leg_reg <- ggplotRegression_c_leg(mod_v_legumes.y_pk_c)
+
+
+```
+
+```{r ffq-v-t-total}
+
+# Calprotectin
+
+# Create v_t_total.y_pk (pk = per 1000 kcal)
+
+df_c$v_t_total.y_pk <- df_c$v_t_total.y/(df_c$kcal/1000)
+
+mod_v_t_total.y_pk_c <- lm(clpn_ln ~ v_t_total.y_pk + age + sex + bmi_final, data = df_c)
+summary(mod_v_t_total.y_pk_c) # NS
+
+# make the regression plot 
+
+ggplotRegression_c_v_t_total_pk <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Habitual Total Vegetable Intake vs. Subclinical Calprotectin (n = 253)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 2),
+                     ", Beta = ",signif(fit$coef[[2]], 2),
+                     ", P = ",signif(summary(fit)$coef[2,4], 2)),
+       x = "Total Vegetable Intake (cup eq per 1000 kcal)",
+       y = "Transformed Calprotectin (ln(x + 1))") +
+  theme_bw() + 
+  theme(text = element_text(size = 15),
+        plot.title = element_text(size = 20),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 15),
+        plot.margin = margin(10, 50, 10, 30, unit = "pt"))
+}
+
+ggplotRegression_c_v_t_total_pk(mod_v_t_total.y_pk_c)
+
+c_v_t_total_reg <- ggplotRegression_c_v_t_total_pk(mod_v_t_total.y_pk_c)
+
+
+```
+
+
+```{r asa24-hei}
+
+# Calprotectin
+
+mod_hei_asa24_totalscore_c <- lm(clpn_ln ~ hei_asa24_totalscore + age + sex + bmi_final, data = df_c)
+summary(mod_hei_asa24_totalscore_c) # NS
+
+# make the regression plot 
+
+ggplotRegression_c_hei_asa24_totalscore <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Recent HEI Score vs. Subclinical Calprotectin (n = 253)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 2),
+                     ", Beta = ",signif(fit$coef[[2]], 2),
+                     ", P = ",signif(summary(fit)$coef[2,4], 2)),
+       x = "Total Healthy Eating Index Score",
+       y = "Transformed Calprotectin (ln(x + 1))") +
+  theme_bw() + 
+  theme(text = element_text(size = 15),
+        plot.title = element_text(size = 20),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 15),
+        plot.margin = margin(10, 50, 10, 30, unit = "pt"))
+}
+
+ggplotRegression_c_hei_asa24_totalscore(mod_hei_asa24_totalscore_c)
+
+c_hei_asa24_totalscore_reg <- ggplotRegression_c_hei_asa24_totalscore(mod_hei_asa24_totalscore_c)
+
+
+```
+
+
+
+```{r grid-save}
+
+# Grid and save: 
+
+
+fig4 <- ggarrange(c_fib_reg, c_leg_reg, c_v_t_total_reg, c_hei_asa24_totalscore_reg,
+                      labels = c("A", "B", "C", "D"),
+                      nrow = 2, ncol = 2)
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/fig4.jpg', plot = fig4, device = 'jpeg', dpi = 300, width = 21, height = 14, units = "in")
+
+```
+

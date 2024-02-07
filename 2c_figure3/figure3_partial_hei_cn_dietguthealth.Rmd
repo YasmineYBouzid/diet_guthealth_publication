@@ -1,0 +1,213 @@
+---
+title: "table1_dietguthealth"
+author: "Yasmine"
+date: "2024-01-12"
+output: html_document
+---
+
+Running statistics to see associations between fiber and gut health (Table 1)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggpubr)
+library(effects)
+```
+
+```{r import}
+
+df_c <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_c.csv", header = T)
+
+df_n <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_n.csv", header = T)
+
+
+# unfortunately, need to correct structure of some variables each time -->
+
+df_c$subject_id <- as.factor(as.character(df_c$subject_id))
+df_c$sex <- df_c$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_c$age_cat <- df_c$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_c$bmi_cat <- df_c$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_n$subject_id <- as.factor(as.character(df_n$subject_id))
+df_n$sex <- df_n$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_n$age_cat <- df_n$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_n$bmi_cat <- df_n$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+```
+
+Models used for analysis: regression of transformed GI inflammation marker ~ dietary component
+Covariates: age, sex, BMI
+
+Creating plots to show regression curves for associations between total HEI and calprotectin and neopterin
+
+```{r asa24-hei}
+
+# Calprotectin
+
+mod_hei_asa24_totalscore_c <- lm(clpn_ln ~ hei_asa24_totalscore + age + sex + bmi_final, data = df_c)
+summary(mod_hei_asa24_totalscore_c) # NS
+
+# make the regression plot 
+
+ggplotRegression_c_hei <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Recent Intake Total HEI Score vs. Calprotectin (n = 295)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 2),
+                     ", Slope = ",signif(fit$coef[[2]], 2),
+                     ", P = ",signif(summary(fit)$coef[2,4], 2)),
+       x = "Total Healthy Eating Index Score",
+       y = "Transformed Calprotectin (ln(x + 1))") +
+  theme_bw() + 
+  theme(text = element_text(size = 13),
+        plot.title = element_text(size = 20),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 15))
+}
+
+ggplotRegression_c_hei(mod_hei_asa24_totalscore_c)
+
+c_hei_reg <- ggplotRegression_c_hei(mod_hei_asa24_totalscore_c)
+
+# Partial regression 
+
+# Look at all predictors
+plot(allEffects(mod_hei_asa24_totalscore_c, residuals = T)) 
+
+eff_hei_asa24_totalscore_hei_asa24_totalscore <- plot(allEffects(mod_hei_asa24_totalscore_c, residuals = T), 
+     selection = 1, 
+     main = 'Partial Regression Recent HEI Score vs. Calprotectin', 
+     xlab = 'Total Healthy Eating Index Score', 
+     ylab = 'Transformed Calprotectin (ln(x + 1)')
+
+eff_hei_asa24_totalscore_age <- plot(allEffects(mod_hei_asa24_totalscore_c, residuals = T), 
+     selection = 2, 
+     main = 'Partial Regression for Age (Recent HEI Score vs. Calprotectin)', 
+     xlab = 'Age (years)', 
+     ylab = 'Transformed Calprotectin (ln(x + 1)')
+
+eff_hei_asa24_totalscore_sex <- plot(allEffects(mod_hei_asa24_totalscore_c, residuals = T), 
+     selection = 3, 
+     main = 'Partial Regression for Sex (Recent HEI Score vs. Calprotectin)', 
+     xlab = 'Sex', 
+     ylab = 'Transformed Calprotectin (ln(x + 1)')
+
+eff_hei_asa24_totalscore_bmi <- plot(allEffects(mod_hei_asa24_totalscore_c, residuals = T), 
+     selection = 4, 
+     main = 'Partial Regression for BMI (Recent HEI Score vs. Calprotectin)', 
+     xlab = expression('BMI (kg/m'^2*')'),
+     ylab = 'Transformed Calprotectin (ln(x + 1)')
+
+# Grid and save 
+
+fig3_par_hei_asa24_totalscore <- ggarrange(eff_hei_asa24_totalscore_hei_asa24_totalscore, eff_hei_asa24_totalscore_age, eff_hei_asa24_totalscore_sex, eff_hei_asa24_totalscore_bmi,
+                      labels = c("A", "B", "C", "D"),
+                      nrow = 2, ncol = 2)
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/fig3_par_hei_asa24_totalscore.jpg', plot = fig3_par_hei_asa24_totalscore, device = 'jpeg', dpi = 300, width = 20, height = 10)
+
+
+
+
+
+
+# Neopterin
+
+mod_hei_asa24_totalscore_n <- lm(nptn_boxcox ~ hei_asa24_totalscore + age + sex + bmi_final, data = df_n)
+summary(mod_hei_asa24_totalscore_n) # 
+
+# make the regression plot 
+
+ggplotRegression_n_hei <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "blue") +
+  labs(title = "Recent Intake Total HEI Score vs. Neopterin (n = 289)",
+         subtitle = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 2),
+                     ", Slope = ",signif(fit$coef[[2]], 2),
+                     ", P = ",signif(summary(fit)$coef[2,4], 2)),
+       x = "Total Healthy Eating Index Score",
+       y = "Transformed Neopterin (Box Cox)") +
+  theme_bw() + 
+  theme(text = element_text(size = 13),
+        plot.title = element_text(size = 20),
+           axis.title = element_text(size = 18),
+           axis.text = element_text(size = 15))
+}
+
+ggplotRegression_n_hei(mod_hei_asa24_totalscore_n)
+
+n_hei_reg <- ggplotRegression_n_hei(mod_hei_asa24_totalscore_n)
+
+
+# Partial regression 
+
+# Look at all predictors
+plot(allEffects(mod_hei_asa24_totalscore_n, residuals = T)) 
+
+eff_hei_asa24_totalscore_hei <- plot(allEffects(mod_hei_asa24_totalscore_n, residuals = T), 
+     selection = 1, 
+     main = 'Partial Regression Recent HEI Score vs. Neopterin', 
+     xlab = 'Total Healthy Eating Index Score', 
+     ylab = 'Transformed Neopterin (Box Cox)',
+     cex.main=2, cex.lab=2,cex.axis=2)
+
+eff_hei_asa24_totalscore_age <- plot(allEffects(mod_hei_asa24_totalscore_n, residuals = T), 
+     selection = 2, 
+     main = 'Partial Regression for Age (Recent HEI Score vs. Neopterin)', 
+     xlab = 'Age (years)', 
+     ylab = 'Transformed Neopterin (Box Cox)',
+     cex.main=2, cex.lab=2,cex.axis=2)
+
+eff_hei_asa24_totalscore_sex <- plot(allEffects(mod_hei_asa24_totalscore_n, residuals = T), 
+     selection = 3, 
+     main = 'Partial Regression for Sex (Recent HEI Score vs. Neopterin)', 
+     xlab = 'Sex', 
+     ylab = 'Transformed Neopterin (Box Cox)',
+     cex.main=2, cex.lab=2,cex.axis=2)
+
+eff_hei_asa24_totalscore_bmi <- plot(allEffects(mod_hei_asa24_totalscore_n, residuals = T), 
+     selection = 4, 
+     main = 'Partial Regression for BMI (Recent HEI Score vs. Neopterin)', 
+     xlab = expression('BMI (kg/m'^2*')'),
+     ylab = 'Transformed Neopterin (Box Cox)',
+     cex.main=2, #change font size of title
+     cex.sub=2, #change font size of subtitle
+     cex.lab=2, #change font size of axis labels
+     cex.axis=2)
+    
+
+# Grid and save 
+
+fig3_par_hei_asa24_totalscore_n <- ggarrange(eff_hei_asa24_totalscore_hei_asa24_totalscore, eff_hei_asa24_totalscore_age, eff_hei_asa24_totalscore_sex, eff_hei_asa24_totalscore_bmi,
+                      labels = c("A", "B", "C", "D"),
+                      nrow = 2, ncol = 2)
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/fig3_par_hei_asa24_totalscore_n.jpg', plot = fig3_par_hei_asa24_totalscore_n, device = 'jpeg', dpi = 300, width = 25, height = 15)
+
+
+```
+
+
+
+```{r grid-save}
+
+# Grid and save: 
+
+
+fig3 <- ggarrange(c_hei_reg, n_hei_reg,
+                      labels = c("A", "B"),
+                      nrow = 1, ncol = 2)
+
+ggsave(filename = '/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/plots/fig3.jpg', plot = fig3, device = 'jpeg', dpi = 300, width = 15, height = 5)
+
+```
+

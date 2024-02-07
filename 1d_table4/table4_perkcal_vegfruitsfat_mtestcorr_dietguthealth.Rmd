@@ -1,0 +1,366 @@
+---
+title: "table4_dietguthealth"
+author: "Yasmine"
+date: "2024-01-12"
+output: html_document
+---
+
+Running statistics to see associations between vegetable, fruit, saturated fat intake and gut health (Table 2) per 1000 kcal
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+
+```
+
+```{r import}
+
+df_c <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_c.csv", header = T)
+
+df_m <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_m.csv", header = T)
+
+# For both, we're excluding those with calprotectin and mpo levels above clinical threshold:
+
+
+# Label based off the clinical designation levels
+
+df_c$clin_level_clpn[df_c$Stool.calprotectin < 50] <- "negative"
+
+df_c$clin_level_clpn[df_c$Stool.calprotectin >= 50 & df_c$Stool.calprotectin <= 100] <- "bord_positive"
+
+df_c$clin_level_clpn[df_c$Stool.calprotectin > 100] <- "positive"
+
+# Convert variable type to factor, and order them 
+df_c$clin_level_clpn <- factor(df_c$clin_level_clpn, ordered = T,
+                                  c("negative", "bord_positive", "positive"))
+
+table(df_c$clin_level_clpn)
+
+df_c_s <- df_c %>% filter(clin_level_clpn != "positive") # n = 253, check. 
+
+df_c <- df_c_s
+rm(df_c_s)
+
+
+# Label based off the clinical designation levels
+
+df_m$clin_level_mpo[df_m$fecal_mpo < 2000] <- "negative"
+
+df_m$clin_level_mpo[df_m$fecal_mpo >= 2000] <- "positive"
+
+# Convert variable type to factor, and order them 
+df_m$clin_level_mpo <- factor(df_m$clin_level_mpo, ordered = T,
+                                  c("negative", "positive"))
+
+table(df_m$clin_level_mpo)
+
+df_m_s <- df_m %>% filter(clin_level_mpo != "positive") # n = 286, check.
+
+df_m <- df_m_s
+rm(df_m_s)
+
+
+# unfortunately, need to correct structure of some variables each time -->
+
+df_c$subject_id <- as.factor(as.character(df_c$subject_id))
+df_c$sex <- df_c$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_c$age_cat <- df_c$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_c$bmi_cat <- df_c$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_m$subject_id <- as.factor(as.character(df_m$subject_id))
+df_m$sex <- df_m$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_m$age_cat <- df_m$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_m$bmi_cat <- df_m$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+
+```
+
+Models used for analysis: regression of transformed GI inflammation marker ~ dietary component
+Covariates: age, sex, BMI
+
+First, vegetables excluding legumes (ASA24) called v_total.x (merged first to df)
+
+```{r asa24-veg-excl-leg}
+
+# Create v_total.x_pk (pk = per 1000 kcal)
+
+df_c$v_total.x_pk <- df_c$v_total.x/(df_c$kcal/1000)
+df_m$v_total.x_pk <- df_m$v_total.x/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_v_total.x_pk_c <- lm(clpn_ln ~ v_total.x_pk + age + sex + bmi_final, data = df_c)
+summary(mod_v_total.x_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_v_total.x_pk_m <- lm(mpo_ln ~ v_total.x_pk + age + sex + bmi_final, data = df_m)
+summary(mod_v_total.x_pk_m) # NS
+
+# Extract p-values 
+p_c_v_total.x <- summary(mod_v_total.x_pk_c)$coefficients[2,4] 
+p_m_v_total.x <- summary(mod_v_total.x_pk_m)$coefficients[2,4]
+
+```
+Next, vegetables excluding legumes (FFQ) called v_total.y (merged second to df)
+
+```{r ffq-veg-excl-leg}
+
+# Create v_total.y_pk (pk = per 1000 kcal)
+
+df_c$v_total.y_pk <- df_c$v_total.y/(df_c$kcal/1000)
+df_m$v_total.y_pk <- df_m$v_total.y/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_v_total.y_pk_c <- lm(clpn_ln ~ v_total.y_pk + age + sex + bmi_final, data = df_c)
+summary(mod_v_total.y_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_v_total.y_pk_m <- lm(mpo_ln ~ v_total.y_pk + age + sex + bmi_final, data = df_m)
+summary(mod_v_total.y_pk_m) # NS
+
+# Extract p-values 
+p_c_v_total.y <- summary(mod_v_total.y_pk_c)$coefficients[2,4] 
+p_m_v_total.y <- summary(mod_v_total.y_pk_m)$coefficients[2,4]
+
+```
+
+Now, legumes (ASA24) called v_legumes.x (merged first to df)
+
+```{r asa24-legumes}
+
+# Create v_legumes.x_pk (pk = per 1000 kcal)
+
+df_c$v_legumes.x_pk <- df_c$v_legumes.x/(df_c$kcal/1000)
+df_m$v_legumes.x_pk <- df_m$v_legumes.x/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_v_legumes.x_pk_c <- lm(clpn_ln ~ v_legumes.x_pk + age + sex + bmi_final, data = df_c)
+summary(mod_v_legumes.x_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_v_legumes.x_pk_m <- lm(mpo_ln ~ v_legumes.x_pk + age + sex + bmi_final, data = df_m)
+summary(mod_v_legumes.x_pk_m) # P = 0.0458 * 
+
+# Extract p-values 
+p_c_v_legumes.x <- summary(mod_v_legumes.x_pk_c)$coefficients[2,4] 
+p_m_v_legumes.x <- summary(mod_v_legumes.x_pk_m)$coefficients[2,4]
+
+```
+Next, legumes (FFQ) called v_legumes.y (merged second to df)
+
+```{r ffq-legumes}
+
+# Create v_legumes.y_pk (pk = per 1000 kcal)
+
+df_c$v_legumes.y_pk <- df_c$v_legumes.y/(df_c$kcal/1000)
+df_m$v_legumes.y_pk <- df_m$v_legumes.y/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_v_legumes.y_pk_c <- lm(clpn_ln ~ v_legumes.y_pk + age + sex + bmi_final, data = df_c)
+summary(mod_v_legumes.y_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_v_legumes.y_pk_m <- lm(mpo_ln ~ v_legumes.y_pk + age + sex + bmi_final, data = df_m)
+summary(mod_v_legumes.y_pk_m) # NS
+
+# Extract p-values 
+p_c_v_legumes.y <- summary(mod_v_legumes.y_pk_c)$coefficients[2,4] 
+p_m_v_legumes.y <- summary(mod_v_legumes.y_pk_m)$coefficients[2,4]
+
+```
+Up next, true total vegetables (v_total + v_legumes) = v_t_total.x 
+
+```{r asa24-veg-t_tot}
+
+# Create v_t_total.x_pk (pk = per 1000 kcal)
+
+df_c$v_t_total.x_pk <- df_c$v_t_total.x/(df_c$kcal/1000)
+df_m$v_t_total.x_pk <- df_m$v_t_total.x/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_v_t_total.x_pk_c <- lm(clpn_ln ~ v_t_total.x_pk + age + sex + bmi_final, data = df_c)
+summary(mod_v_t_total.x_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_v_t_total.x_pk_m <- lm(mpo_ln ~ v_t_total.x_pk + age + sex + bmi_final, data = df_m)
+summary(mod_v_t_total.x_pk_m) # NS
+
+# Extract p-values 
+p_c_v_t_total.x <- summary(mod_v_t_total.x_pk_c)$coefficients[2,4] 
+p_m_v_t_total.x <- summary(mod_v_t_total.x_pk_m)$coefficients[2,4]
+
+```
+Next, true total vegetables (FFQ) called v_t_total.y (merged second to df)
+
+```{r ffq-veg-t-tot}
+
+# Create v_t_total.y_pk (pk = per 1000 kcal)
+
+df_c$v_t_total.y_pk <- df_c$v_t_total.y/(df_c$kcal/1000)
+df_m$v_t_total.y_pk <- df_m$v_t_total.y/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_v_t_total.y_pk_c <- lm(clpn_ln ~ v_t_total.y_pk + age + sex + bmi_final, data = df_c)
+summary(mod_v_t_total.y_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_v_t_total.y_pk_m <- lm(mpo_ln ~ v_t_total.y_pk + age + sex + bmi_final, data = df_m)
+summary(mod_v_t_total.y_pk_m) # NS
+
+# Extract p-values 
+p_c_v_t_total.y <- summary(mod_v_t_total.y_pk_c)$coefficients[2,4] 
+p_m_v_t_total.y <- summary(mod_v_t_total.y_pk_m)$coefficients[2,4]
+
+```
+Let's look at total fruit (f_total)
+
+```{r asa24-f-tot}
+
+# Create f_total.x_pk (pk = per 1000 kcal)
+
+df_c$f_total.x_pk <- df_c$f_total.x/(df_c$kcal/1000)
+df_m$f_total.x_pk <- df_m$f_total.x/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_f_total.x_pk_c <- lm(clpn_ln ~ f_total.x_pk + age + sex + bmi_final, data = df_c)
+summary(mod_f_total.x_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_f_total.x_pk_m <- lm(mpo_ln ~ f_total.x_pk + age + sex + bmi_final, data = df_m)
+summary(mod_f_total.x_pk_m) # NS
+
+# Extract p-values 
+p_c_f_total.x <- summary(mod_f_total.x_pk_c)$coefficients[2,4] 
+p_m_f_total.x <- summary(mod_f_total.x_pk_m)$coefficients[2,4]
+
+
+```
+Next, total fruit (FFQ) called f_total.y (merged second to df)
+
+```{r ffq-f-tot}
+
+# Create f_total.y_pk (pk = per 1000 kcal)
+
+df_c$f_total.y_pk <- df_c$f_total.y/(df_c$kcal/1000)
+df_m$f_total.y_pk <- df_m$f_total.y/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_f_total.y_pk_c <- lm(clpn_ln ~ f_total.y_pk + age + sex + bmi_final, data = df_c)
+summary(mod_f_total.y_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_f_total.y_pk_m <- lm(mpo_ln ~ f_total.y_pk + age + sex + bmi_final, data = df_m)
+summary(mod_f_total.y_pk_m) # NS
+
+# Extract p-values 
+p_c_f_total.y <- summary(mod_f_total.y_pk_c)$coefficients[2,4] 
+p_m_f_total.y <- summary(mod_f_total.y_pk_m)$coefficients[2,4]
+
+```
+Finally, looking at saturated fat (sfat)
+
+```{r asa24-sfat}
+
+# Create sfat_pk (pk = per 1000 kcal)
+
+df_c$sfat_pk <- df_c$sfat/(df_c$kcal/1000)
+df_m$sfat_pk <- df_m$sfat/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_sfat_pk_c <- lm(clpn_ln ~ sfat_pk + age + sex + bmi_final, data = df_c)
+summary(mod_sfat_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_sfat_pk_m <- lm(mpo_ln ~ sfat_pk + age + sex + bmi_final, data = df_m)
+summary(mod_sfat_pk_m) 
+
+# Extract p-values 
+p_c_sfat <- summary(mod_sfat_pk_c)$coefficients[2,4] 
+p_m_sfat <- summary(mod_sfat_pk_m)$coefficients[2,4]
+
+```
+Last, saturated fat (FFQ) called dt_sfat
+
+```{r ffq-f-tot}
+
+# Create dt_sfat_pk (pk = per 1000 kcal)
+
+df_c$dt_sfat_pk <- df_c$dt_sfat/(df_c$kcal/1000)
+df_m$dt_sfat_pk <- df_m$dt_sfat/(df_m$kcal/1000)
+
+# Calprotectin
+
+mod_dt_sfat_pk_c <- lm(clpn_ln ~ dt_sfat_pk + age + sex + bmi_final, data = df_c)
+summary(mod_dt_sfat_pk_c) # NS
+
+# Myeloperoxidase
+
+mod_dt_sfat_pk_m <- lm(mpo_ln ~ dt_sfat_pk + age + sex + bmi_final, data = df_m)
+summary(mod_dt_sfat_pk_m) #
+
+# Extract p-values 
+p_c_dt_sfat <- summary(mod_dt_sfat_pk_c)$coefficients[2,4] 
+p_m_dt_sfat <- summary(mod_dt_sfat_pk_m)$coefficients[2,4]
+
+```
+
+```{r p-test-df}
+
+# Import the data frames
+
+c_s_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_asa_pk_pval_df.csv", header = T)
+m_s_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_asa_pk_pval_df.csv", header = T)
+
+c_s_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_ffq_pk_pval_df.csv", header = T)
+m_s_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_ffq_pk_pval_df.csv", header = T)
+
+# Collating the p-vals into a df for future multiple hypothesis test correction 
+
+c_s_asa_pk_pval_df_t <- data.frame(p_c_v_total.x, p_c_v_legumes.x, p_c_v_t_total.x, p_c_f_total.x, p_c_sfat)
+c_s_ffq_pk_pval_df_t <- data.frame(p_c_v_total.y, p_c_v_legumes.y, p_c_v_t_total.y, p_c_f_total.y, p_c_dt_sfat)
+
+m_s_asa_pk_pval_df_t <- data.frame(p_m_v_total.x, p_m_v_legumes.x, p_m_v_t_total.x, p_m_f_total.x, p_m_sfat)
+m_s_ffq_pk_pval_df_t <-  data.frame(p_m_v_total.y, p_m_v_legumes.y, p_m_v_t_total.y, p_m_f_total.y, p_m_dt_sfat)
+
+# Merge 
+
+c_s_asa_pk_pval_df <- merge(c_s_asa_pk_pval_df, c_s_asa_pk_pval_df_t)
+c_s_ffq_pk_pval_df <- merge(c_s_ffq_pk_pval_df, c_s_ffq_pk_pval_df_t)
+
+m_s_asa_pk_pval_df <- merge(m_s_asa_pk_pval_df, m_s_asa_pk_pval_df_t)
+m_s_ffq_pk_pval_df <- merge(m_s_ffq_pk_pval_df, m_s_ffq_pk_pval_df_t)
+
+
+# Export
+
+write.csv(c_s_asa_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_asa_pk_pval_df.csv", row.names = T)
+write.csv(c_s_ffq_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_ffq_pk_pval_df.csv", row.names = T)
+
+write.csv(m_s_asa_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_asa_pk_pval_df.csv", row.names = T)
+write.csv(m_s_ffq_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_ffq_pk_pval_df.csv", row.names = T)
+
+```
+
+**Summary of Findings**: 
+
+- Habitual intake total fiber negatively correlated with subclinical calprotectin 
+- Habitual intake legumes, total vegetables negatively correlated with subclinical calprotectin
+- Habitual intake saturated fat positively correlated with subclinical calprotectin 

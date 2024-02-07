@@ -1,0 +1,202 @@
+---
+title: "table1_dietguthealth"
+author: "Yasmine"
+date: "2024-01-12"
+output: html_document
+---
+
+Running statistics to see associations between fiber and gut health (Table 1)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+
+```
+
+```{r import}
+
+df_c <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_c.csv", header = T)
+
+df_m <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/df_m.csv", header = T)
+
+
+# For both, we're excluding those with calprotectin and mpo levels above clinical threshold:
+
+
+# Label based off the clinical designation levels
+
+df_c$clin_level_clpn[df_c$Stool.calprotectin < 50] <- "negative"
+
+df_c$clin_level_clpn[df_c$Stool.calprotectin >= 50 & df_c$Stool.calprotectin <= 100] <- "bord_positive"
+
+df_c$clin_level_clpn[df_c$Stool.calprotectin > 100] <- "positive"
+
+# Convert variable type to factor, and order them 
+df_c$clin_level_clpn <- factor(df_c$clin_level_clpn, ordered = T,
+                                  c("negative", "bord_positive", "positive"))
+
+table(df_c$clin_level_clpn)
+
+df_c_s <- df_c %>% filter(clin_level_clpn != "positive") # n = 253, check. 
+
+df_c <- df_c_s
+rm(df_c_s)
+
+
+# Label based off the clinical designation levels
+
+df_m$clin_level_mpo[df_m$fecal_mpo < 2000] <- "negative"
+
+df_m$clin_level_mpo[df_m$fecal_mpo >= 2000] <- "positive"
+
+# Convert variable type to factor, and order them 
+df_m$clin_level_mpo <- factor(df_m$clin_level_mpo, ordered = T,
+                                  c("negative", "positive"))
+
+table(df_m$clin_level_mpo)
+
+df_m_s <- df_m %>% filter(clin_level_mpo != "positive") # n = 286, check.
+
+df_m <- df_m_s
+rm(df_m_s)
+
+# unfortunately, need to correct structure of some variables each time -->
+
+df_c$subject_id <- as.factor(as.character(df_c$subject_id))
+df_c$sex <- df_c$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_c$age_cat <- df_c$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_c$bmi_cat <- df_c$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+df_m$subject_id <- as.factor(as.character(df_m$subject_id))
+df_m$sex <- df_m$sex %>% recode_factor('1' = 'Male', '2' = "Female")
+df_m$age_cat <- df_m$age_cat %>% recode_factor('1' = '18-33.99 years', '2' = "34-49.99 years", '3' = "50-65 years")
+df_m$bmi_cat <- df_m$bmi_cat %>% recode_factor('1' = 'Normal', '2' = "Overweight", '3' = "Obese")
+
+```
+
+Models used for analysis: regression of transformed GI inflammation marker ~ dietary component
+Covariates: age, sex, BMI
+
+Starting with total HEI scores
+
+```{r asa24-hei}
+
+# Calprotectin
+
+mod_hei_asa24_totalscore_c <- lm(clpn_ln ~ hei_asa24_totalscore + age + sex + bmi_final, data = df_c)
+summary(mod_hei_asa24_totalscore_c) # NS
+
+# Myeloperoxidase
+
+mod_hei_asa24_totalscore_m <- lm(mpo_ln ~ hei_asa24_totalscore + age + sex + bmi_final, data = df_m)
+summary(mod_hei_asa24_totalscore_m) # NS
+
+# Extract p-values 
+p_c_s_hei_asa24_totalscore <- summary(mod_hei_asa24_totalscore_c)$coefficients[2,4] 
+p_m_s_hei_asa24_totalscore <- summary(mod_hei_asa24_totalscore_m)$coefficients[2,4]
+
+
+```
+Total HEI scores (ffq)
+
+```{r ffq-hei}
+
+# Calprotectin
+
+mod_hei_ffq_totalscore_c <- lm(clpn_ln ~ hei_ffq_totalscore + age + sex + bmi_final, data = df_c)
+summary(mod_hei_ffq_totalscore_c) # NS
+
+# Myeloperoxidase
+
+mod_hei_ffq_totalscore_m <- lm(mpo_ln ~ hei_ffq_totalscore + age + sex + bmi_final, data = df_m)
+summary(mod_hei_ffq_totalscore_m) # NS
+
+# Extract p-values 
+p_c_s_hei_ffq_totalscore <- summary(mod_hei_ffq_totalscore_c)$coefficients[2,4] 
+p_m_s_hei_ffq_totalscore <- summary(mod_hei_ffq_totalscore_m)$coefficients[2,4]
+
+```
+
+Last, we'll look at DII scores
+
+```{r asa24-dii}
+
+# Calprotectin
+
+mod_dii_asa24_total_score_c <- lm(clpn_ln ~ dii_asa24_total_score + age + sex + bmi_final, data = df_c)
+summary(mod_dii_asa24_total_score_c) # NS
+
+# Myeloperoxidase
+
+mod_dii_asa24_total_score_m <- lm(mpo_ln ~ dii_asa24_total_score + age + sex + bmi_final, data = df_m)
+summary(mod_dii_asa24_total_score_m) # NS
+
+# Extract p-values 
+p_c_s_dii_asa24_total_score <- summary(mod_dii_asa24_total_score_c)$coefficients[2,4] 
+p_m_s_dii_asa24_total_score <- summary(mod_dii_asa24_total_score_m)$coefficients[2,4]
+
+```
+
+```{r ffq-dii}
+
+# Calprotectin
+
+mod_dii_ffq_total_score_c <- lm(clpn_ln ~ dii_ffq_total_score + age + sex + bmi_final, data = df_c)
+summary(mod_dii_ffq_total_score_c) # NS
+
+# Myeloperoxidase
+
+mod_dii_ffq_total_score_m <- lm(mpo_ln ~ dii_ffq_total_score + age + sex + bmi_final, data = df_m)
+summary(mod_dii_ffq_total_score_m) # NS
+
+# Extract p-values 
+p_c_s_dii_ffq_total_score <- summary(mod_dii_ffq_total_score_c)$coefficients[2,4] 
+p_m_s_dii_ffq_total_score <- summary(mod_dii_ffq_total_score_m)$coefficients[2,4]
+
+
+```
+
+```{r p-test-df}
+
+# Import the data frames
+
+c_s_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_asa_pk_pval_df.csv", header = T)
+m_s_asa_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_asa_pk_pval_df.csv", header = T)
+
+c_s_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_ffq_pk_pval_df.csv", header = T)
+m_s_ffq_pk_pval_df <- read.csv("/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_ffq_pk_pval_df.csv", header = T)
+
+
+# Collating the p-vals into a df for future multiple hypothesis test correction 
+
+c_s_asa_pk_pval_df_t <- data.frame(p_c_s_hei_asa24_totalscore, p_c_s_dii_asa24_total_score)
+c_s_ffq_pk_pval_df_t <- data.frame(p_c_s_hei_ffq_totalscore, p_c_s_dii_ffq_total_score)
+
+m_s_asa_pk_pval_df_t <- data.frame(p_m_s_hei_asa24_totalscore, p_m_s_dii_asa24_total_score)
+m_s_ffq_pk_pval_df_t <- data.frame(p_m_s_hei_ffq_totalscore, p_m_s_dii_ffq_total_score)
+
+
+# Merge 
+
+c_s_asa_pk_pval_df <- merge(c_s_asa_pk_pval_df, c_s_asa_pk_pval_df_t)
+c_s_ffq_pk_pval_df <- merge(c_s_ffq_pk_pval_df, c_s_ffq_pk_pval_df_t)
+
+m_s_asa_pk_pval_df <- merge(m_s_asa_pk_pval_df, m_s_asa_pk_pval_df_t)
+m_s_ffq_pk_pval_df <- merge(m_s_ffq_pk_pval_df, m_s_ffq_pk_pval_df_t)
+
+
+# Export
+
+write.csv(c_s_asa_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_asa_pk_pval_df.csv", row.names = T)
+write.csv(c_s_ffq_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/c_s_ffq_pk_pval_df.csv", row.names = T)
+
+write.csv(m_s_asa_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_asa_pk_pval_df.csv", row.names = T)
+write.csv(m_s_ffq_pk_pval_df, "/Users/yasmine.bouzid/Documents/GitHub/diet_guthealth/data/m_s_ffq_pk_pval_df.csv", row.names = T)
+
+
+```
+
+**Summary of Findings**: 
+
+- Recent Healthy eating index score negatively correlated with subclinical calprotectin
