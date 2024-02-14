@@ -4,7 +4,9 @@ Project Description: This repository contains code and scripts for analysis on U
 Author = Yasmine Y. Bouzid
 
 ## Please CITE
-Bouzid YY, ...
+Bouzid YY, Wilson SMG, Alkan Z, Stephensen CB, Lemay DG. Lower Diet Quality Associated with Subclinical Gastrointestinal Inflammation in Healthy U.S. Adults. 
+
+Publication Status: under review
 
 ## Table of Contents: 
 
@@ -14,5 +16,7 @@ Bouzid YY, ...
 
 **Scripts**
 
+- 0_covariate_checks: analysis to determinate associations between alcohol intake and physical activity with GI inflammation markers considering inclusion as covariates in regression models (no associations)
+- 1a_table1: 
 
 
