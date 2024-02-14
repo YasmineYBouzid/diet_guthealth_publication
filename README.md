@@ -16,7 +16,9 @@ Publication Status: under review
 
 **Scripts**
 
-- 0_covariate_checks: analysis to determinate associations between alcohol intake and physical activity with GI inflammation markers considering inclusion as covariates in regression models (no associations)
-- 1a_table1: 
+- *0_covariate_checks*: analysis to determinate associations between alcohol intake and physical activity with GI inflammation markers considering inclusion as covariates in regression models (no associations)
+- *1a_table1*: table1_perkcal_fiber_dietguthealth.Rmd = regression analysis to determine associations between recent total fiber, habiutal total fiber, and habitual soluble fiber intake. table1_perkcal_fiber_mtestcorr_dietguthealth.Rmd = extracting p-values from analysis for multiple hypothesis testing correction using Benjamini Hochberg method
+- *1b_table2*: table2_perkcal_vegfruitsfat_dietguthealth.Rmd = regression analysis to determine associations between vegetable (excluding legumes), legume, total vegetables, total fruit, and saturated fat intake both recently (ASA24) and habitually (FFQ). table2_perkcal_vegfruitsfat_mtestcorr_dietguthealth.Rmd = extracting p-values from analysis for multiple hypothesis testing correction using Benjamini Hochberg method
+- *
 
 
